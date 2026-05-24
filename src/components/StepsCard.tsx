@@ -49,7 +49,7 @@ const STEPS: Step[] = [
     kind: "check",
     key: "gm",
     label: "Send gm on Ethereum (today)",
-    subtitle: "Send a fresh gm today — resets daily at 00:00 UTC",
+    subtitle: "Send a fresh gm today",
     url: LINKS.gmDapp,
   },
 ];
@@ -210,7 +210,7 @@ export function StepsCard() {
         wallet: address,
         submittedAt: issuedAt,
       });
-      setSubmitInfo(`Sent — @${handle} · ${short(address)}`);
+      setSubmitInfo(`Sent. @${handle} · ${short(address)}`);
     } catch (err) {
       const message = (err as Error).message ?? "Unknown error";
       if (/User (rejected|denied)/i.test(message)) {
@@ -334,7 +334,7 @@ export function StepsCard() {
           <span className="text-emerald-600 dark:text-emerald-400">{info}</span>
         ) : allDone ? (
           <span className="text-emerald-600 dark:text-emerald-400">
-            All steps done — fill in your X handle below to submit.
+            All steps done.
           </span>
         ) : (
           <span className="text-tertiary">
@@ -373,8 +373,7 @@ export function StepsCard() {
             </button>
           </div>
           <p className="text-[11px] text-tertiary mt-2 leading-snug">
-            Paste the hash of your gm tx — we’ll confirm it succeeded, was sent from this wallet,
-            and targeted the gm contract.
+            Paste the hash of your gm tx.
           </p>
         </div>
       ) : null}
@@ -423,9 +422,7 @@ export function StepsCard() {
             ) : submitInfo ? (
               <span className="text-emerald-600 dark:text-emerald-400">{submitInfo}</span>
             ) : (
-              <span className="text-tertiary">
-                Sign a message to confirm ownership; sent to Discord.
-              </span>
+              <span className="text-tertiary">Sign a message to confirm ownership.</span>
             )}
           </div>
           <button

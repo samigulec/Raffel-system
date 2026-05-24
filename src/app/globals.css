@@ -28,7 +28,7 @@ body {
   background-size: 24px 24px;
 }
 
-/* Semantic text utilities — theme-aware (dark default) */
+/* Semantic text utilities. Theme-aware (dark default). */
 .text-primary {
   color: #3a3a3a;
 }

@@ -25,7 +25,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Raffel — Complete the steps",
+  title: "Raffel",
   description: "Follow, like, comment, and send a fresh gm on Ethereum.",
 };
 

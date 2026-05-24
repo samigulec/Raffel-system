@@ -75,7 +75,7 @@ export async function redisExists(key: string): Promise<boolean> {
 }
 
 export async function redisSetNx(key: string, value: string): Promise<boolean> {
-  // SET key value NX — returns "OK" if set, null if it already existed.
+  // SET key value NX. Returns "OK" if set, null if it already existed.
   const r = await call<string | null>(["set", key, value, "nx"]);
   return r === "OK";
 }
