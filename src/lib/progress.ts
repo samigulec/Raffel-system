@@ -1,25 +1,37 @@
 export type Progress = {
-  followX: boolean;
-  joinDiscord: boolean;
-  followHey: boolean;
+  followOnchainGm: boolean;
+  followBlobsters: boolean;
+  likeTweet: boolean;
+  commentTweet: boolean;
   gm: boolean;
 };
 
+export type Submission = {
+  xUsername: string;
+  wallet: string;
+  submittedAt: number;
+};
+
 const EMPTY: Progress = {
-  followX: false,
-  joinDiscord: false,
-  followHey: false,
+  followOnchainGm: false,
+  followBlobsters: false,
+  likeTweet: false,
+  commentTweet: false,
   gm: false,
 };
 
-function key(address: string) {
+function progressKey(address: string) {
   return `raffel:progress:${address.toLowerCase()}`;
+}
+
+function submissionKey(address: string) {
+  return `raffel:submission:${address.toLowerCase()}`;
 }
 
 export function loadProgress(address: string | undefined): Progress {
   if (!address || typeof window === "undefined") return EMPTY;
   try {
-    const raw = localStorage.getItem(key(address));
+    const raw = localStorage.getItem(progressKey(address));
     if (!raw) return EMPTY;
     return { ...EMPTY, ...(JSON.parse(raw) as Progress) };
   } catch {
@@ -30,12 +42,33 @@ export function loadProgress(address: string | undefined): Progress {
 export function saveProgress(address: string | undefined, progress: Progress) {
   if (!address || typeof window === "undefined") return;
   try {
-    localStorage.setItem(key(address), JSON.stringify(progress));
+    localStorage.setItem(progressKey(address), JSON.stringify(progress));
+  } catch {
+    // ignore
+  }
+}
+
+export function loadSubmission(address: string | undefined): Submission | null {
+  if (!address || typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(submissionKey(address));
+    return raw ? (JSON.parse(raw) as Submission) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveSubmission(address: string | undefined, submission: Submission) {
+  if (!address || typeof window === "undefined") return;
+  try {
+    localStorage.setItem(submissionKey(address), JSON.stringify(submission));
   } catch {
     // ignore
   }
 }
 
 export function countCompleted(p: Progress): number {
-  return (p.followX ? 1 : 0) + (p.joinDiscord ? 1 : 0) + (p.followHey ? 1 : 0) + (p.gm ? 1 : 0);
+  return Object.values(p).filter(Boolean).length;
 }
+
+export const TOTAL_STEPS = 5;

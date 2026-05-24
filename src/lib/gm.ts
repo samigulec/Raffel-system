@@ -1,4 +1,5 @@
 import { type Address, type Hex, pad, getAddress } from "viem";
+import { GM_CONTRACT } from "./config";
 
 type ReadClient = {
   readContract: (args: unknown) => Promise<unknown>;
@@ -6,7 +7,7 @@ type ReadClient = {
   getLogs: (args: unknown) => Promise<Array<{ topics: (Hex | null)[]; transactionHash: Hex | null }>>;
 };
 
-export const GM_CONTRACT: Address = "0xcd21a60fb9f981dc1274f15ecaa250941edabd4e";
+export { GM_CONTRACT };
 
 const VIEW_ABIS = [
   { name: "lastGm", out: "uint256" },
@@ -64,10 +65,10 @@ export async function checkGm(client: unknown, user: Address): Promise<GmCheck> 
 
   try {
     const latest = await c.getBlockNumber();
-    const span = 500_000n;
+    const span = 200_000n;
     const fromBlock = latest > span ? latest - span : 0n;
 
-    const chunk = 9_999n;
+    const chunk = 4_999n;
     for (let end = latest; end >= fromBlock; ) {
       const start = end > chunk ? end - chunk : 0n;
       const logs = await c.getLogs({

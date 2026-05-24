@@ -1,12 +1,12 @@
 import { http, createConfig } from "wagmi";
-import { base } from "wagmi/chains";
+import { mainnet } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 
 export const wagmiConfig = createConfig({
-  chains: [base],
+  chains: [mainnet],
   connectors: [injected({ shimDisconnect: true })],
   transports: {
-    [base.id]: http("https://mainnet.base.org"),
+    [mainnet.id]: http("https://eth.llamarpc.com"),
   },
   ssr: true,
 });

@@ -1,11 +1,23 @@
-# Raffel — 4-step verification system
+# Raffel — 5-step verification system
 
-A Next.js single-page replica of the "Complete all 4 steps" Faucet Badge UI.
-Steps 1–3 are link-launchers; step 4 checks on-chain that the connected wallet
-has interacted with the OnChainGM Faucet Badge contract on Base.
+A Next.js single-page replica of the "Complete all steps" UI.
 
-- gm contract: `0xcd21a60fb9f981dc1274f15ecaa250941edabd4e` (Base mainnet)
-- A wallet is approved only after `Check` confirms the gm interaction.
+Steps:
+1. Follow **OnChainGM** on X
+2. Follow **Blobsters** on X
+3. Like the tweet
+4. Comment on the tweet
+5. Send **gm** on Ethereum mainnet
+
+Steps 1–4 are link-launchers (auto-clear a few seconds after opening).
+Step 5 verifies on-chain that the connected wallet interacted with the gm
+contract `0xcd21a60fb9f981dc1274f15ecaa250941edabd4e` on **Ethereum
+mainnet** — only verified wallets are approved.
+
+After all 5 steps pass, the user enters their X handle and submits; the
+entry (X username + wallet address) is stored locally per wallet.
+
+Edit links in `src/lib/config.ts` (Blobsters handle, tweet URLs, etc).
 
 ## Run
 
