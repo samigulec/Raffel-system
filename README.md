@@ -14,10 +14,20 @@ Step 5 verifies on-chain that the connected wallet interacted with the gm
 contract `0xcd21a60fb9f981dc1274f15ecaa250941edabd4e` on **Ethereum
 mainnet** — only verified wallets are approved.
 
-After all 5 steps pass, the user enters their X handle and submits; the
-entry (X username + wallet address) is stored locally per wallet.
+After all 5 steps pass, the user enters their X handle, signs a short
+ownership message with their wallet, and submits. The signature is
+verified server-side and the entry is posted to a Discord channel via
+webhook.
 
-Edit links in `src/lib/config.ts` (Blobsters handle, tweet URLs, etc).
+## Setup
+
+1. Edit links in `src/lib/config.ts` (Blobsters handle, tweet URLs, gm dapp).
+2. Create the Discord webhook: **Server Settings → Integrations →
+   Webhooks → New Webhook → Copy URL**.
+3. Copy `.env.example` to `.env.local` and paste the URL into
+   `DISCORD_WEBHOOK_URL`. Restart `npm run dev` after changing env vars.
+4. The webhook URL is read **only on the server** (`src/app/api/submit/route.ts`)
+   and never shipped to the browser.
 
 ## Run
 

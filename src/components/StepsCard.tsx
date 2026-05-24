@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useAccount, usePublicClient } from "wagmi";
+import { useAccount, usePublicClient, useSignMessage } from "wagmi";
 import { CheckIcon, ExternalIcon } from "./ExternalIcon";
 import {
   countCompleted,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/progress";
 import { checkGm, verifyByTxHash } from "@/lib/gm";
 import { GM_CONTRACT, LINKS } from "@/lib/config";
+import { buildSubmissionMessage } from "@/lib/submission";
 
 type StepKey = keyof Progress;
 
@@ -57,6 +58,7 @@ function isValidXHandle(value: string) {
 export function StepsCard() {
   const { address, isConnected } = useAccount();
   const client = usePublicClient();
+  const { signMessageAsync } = useSignMessage();
 
   const [progress, setProgress] = useState<Progress>({
     followOnchainGm: false,
@@ -75,6 +77,7 @@ export function StepsCard() {
   const [xUsername, setXUsername] = useState("");
   const [submitInfo, setSubmitInfo] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setProgress(loadProgress(address));
@@ -148,7 +151,7 @@ export function StepsCard() {
     }
   }
 
-  function submitEntry() {
+  async function submitEntry() {
     setSubmitError(null);
     setSubmitInfo(null);
     if (!isConnected || !address) {
@@ -163,13 +166,52 @@ export function StepsCard() {
       setSubmitError(`Finish all ${TOTAL_STEPS} steps before submitting.`);
       return;
     }
-    const submission = {
-      xUsername: xUsername.replace(/^@/, "").trim(),
+
+    const handle = xUsername.replace(/^@/, "").trim();
+    const issuedAt = Date.now();
+    const message = buildSubmissionMessage({
       wallet: address,
-      submittedAt: Date.now(),
-    };
-    saveSubmission(address, submission);
-    setSubmitInfo(`Saved — @${submission.xUsername} · ${short(address)}`);
+      xUsername: handle,
+      issuedAt,
+    });
+
+    setSubmitting(true);
+    try {
+      const signature = await signMessageAsync({ message });
+
+      const res = await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wallet: address,
+          xUsername: handle,
+          issuedAt,
+          signature,
+        }),
+      });
+
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setSubmitError(data.error ?? `Submit failed (${res.status}).`);
+        return;
+      }
+
+      saveSubmission(address, {
+        xUsername: handle,
+        wallet: address,
+        submittedAt: issuedAt,
+      });
+      setSubmitInfo(`Sent — @${handle} · ${short(address)}`);
+    } catch (err) {
+      const message = (err as Error).message ?? "Unknown error";
+      if (/User (rejected|denied)/i.test(message)) {
+        setSubmitError("Signature cancelled.");
+      } else {
+        setSubmitError(message);
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -341,15 +383,16 @@ export function StepsCard() {
             ) : submitInfo ? (
               <span className="text-emerald-300">{submitInfo}</span>
             ) : (
-              <span className="text-slate-500">Stored locally per wallet.</span>
+              <span className="text-slate-500">Sign a message to confirm ownership; sent to Discord.</span>
             )}
           </div>
           <button
             className="btn btn-primary"
             onClick={submitEntry}
-            disabled={!isConnected || !allDone}
+            disabled={!isConnected || !allDone || submitting}
           >
-            Submit
+            {submitting ? <span className="spinner mr-2" /> : null}
+            {submitting ? "Submitting…" : "Submit"}
           </button>
         </div>
       </div>
