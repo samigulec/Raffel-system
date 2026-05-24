@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: radial-gradient(1200px 600px at 50% -10%, #0e1a3a 0%, #060a1b 60%, #04081a 100%);
+  color: #e5e7eb;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.card-glow {
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.06),
+    0 20px 60px -20px rgba(2, 6, 23, 0.8);
+}
+
+.step-row {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.55));
+  border: 1px solid rgba(56, 189, 248, 0.08);
+  transition: border-color 150ms ease, transform 150ms ease, background 150ms ease;
+}
+
+.step-row:hover {
+  border-color: rgba(56, 189, 248, 0.25);
+  background: linear-gradient(180deg, rgba(17, 28, 56, 0.85), rgba(17, 28, 56, 0.65));
+}
+
+.step-num {
+  background: linear-gradient(180deg, #0b1330, #0a1228);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.step-num.done {
+  background: linear-gradient(180deg, #0c2742, #0a2240);
+  border-color: rgba(34, 211, 238, 0.55);
+  color: #22d3ee;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.6);
+  color: #e5e7eb;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: rgba(34, 211, 238, 0.6);
+  color: #67e8f9;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #22d3ee, #0ea5e9);
+  border-color: transparent;
+  color: #001018;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+  color: #001018;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 2px solid rgba(148, 163, 184, 0.35);
+  border-top-color: #22d3ee;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
