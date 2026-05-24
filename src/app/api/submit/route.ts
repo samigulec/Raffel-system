@@ -2,12 +2,29 @@ import { NextResponse } from "next/server";
 import { createPublicClient, getAddress, http, isAddress } from "viem";
 import { mainnet } from "viem/chains";
 import { buildSubmissionMessage, SIGNATURE_TTL_MS } from "@/lib/submission";
-import { isRedisConfigured, redisExists, redisSetNx } from "@/lib/redis";
+import { isRedisConfigured, redisSetNx } from "@/lib/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const HANDLE_RE = /^[A-Za-z0-9_]{1,15}$/;
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": process.env.CORS_ORIGIN ?? "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Max-Age": "86400",
+};
+
+export function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
+function json(body: unknown, init?: ResponseInit) {
+  const res = NextResponse.json(body, init);
+  for (const [k, v] of Object.entries(CORS_HEADERS)) res.headers.set(k, v);
+  return res;
+}
 
 const verifyClient = createPublicClient({
   chain: mainnet,
@@ -24,17 +41,14 @@ type Body = {
 export async function POST(req: Request) {
   const webhook = process.env.DISCORD_WEBHOOK_URL;
   if (!webhook) {
-    return NextResponse.json(
-      { ok: false, error: "Server is missing DISCORD_WEBHOOK_URL." },
-      { status: 500 },
-    );
+    return json({ ok: false, error: "Server is missing DISCORD_WEBHOOK_URL." }, { status: 500 });
   }
 
   let body: Body;
   try {
     body = (await req.json()) as Body;
   } catch {
-    return NextResponse.json({ ok: false, error: "Invalid JSON." }, { status: 400 });
+    return json({ ok: false, error: "Invalid JSON." }, { status: 400 });
   }
 
   const wallet = typeof body.wallet === "string" ? body.wallet : "";
@@ -44,19 +58,16 @@ export async function POST(req: Request) {
   const signature = typeof body.signature === "string" ? body.signature : "";
 
   if (!isAddress(wallet)) {
-    return NextResponse.json({ ok: false, error: "Invalid wallet address." }, { status: 400 });
+    return json({ ok: false, error: "Invalid wallet address." }, { status: 400 });
   }
   if (!HANDLE_RE.test(xUsername)) {
-    return NextResponse.json({ ok: false, error: "Invalid X username." }, { status: 400 });
+    return json({ ok: false, error: "Invalid X username." }, { status: 400 });
   }
   if (!issuedAt || Math.abs(Date.now() - issuedAt) > SIGNATURE_TTL_MS) {
-    return NextResponse.json(
-      { ok: false, error: "Signature expired. Try Submit again." },
-      { status: 400 },
-    );
+    return json({ ok: false, error: "Signature expired. Try Submit again." }, { status: 400 });
   }
   if (!signature.startsWith("0x")) {
-    return NextResponse.json({ ok: false, error: "Missing signature." }, { status: 400 });
+    return json({ ok: false, error: "Missing signature." }, { status: 400 });
   }
 
   const normalized = getAddress(wallet);
@@ -70,17 +81,11 @@ export async function POST(req: Request) {
       signature: signature as `0x${string}`,
     });
   } catch (err) {
-    return NextResponse.json(
-      { ok: false, error: `Verify failed: ${(err as Error).message}` },
-      { status: 400 },
-    );
+    return json({ ok: false, error: `Verify failed: ${(err as Error).message}` }, { status: 400 });
   }
 
   if (!valid) {
-    return NextResponse.json(
-      { ok: false, error: "Signature does not match the wallet." },
-      { status: 401 },
-    );
+    return json({ ok: false, error: "Signature does not match the wallet." }, { status: 401 });
   }
 
   const walletKey = `raffel:submitted:wallet:${normalized.toLowerCase()}`;
@@ -88,21 +93,23 @@ export async function POST(req: Request) {
 
   if (isRedisConfigured()) {
     try {
-      if (await redisExists(walletKey)) {
-        return NextResponse.json(
+      const walletClaim = await redisSetNx(walletKey, String(issuedAt));
+      if (!walletClaim) {
+        return json(
           { ok: false, error: "This wallet has already submitted an entry." },
           { status: 409 },
         );
       }
-      if (await redisExists(handleKey)) {
-        return NextResponse.json(
+      const handleClaim = await redisSetNx(handleKey, String(issuedAt));
+      if (!handleClaim) {
+        return json(
           { ok: false, error: `@${xUsername} has already submitted an entry.` },
           { status: 409 },
         );
       }
     } catch (err) {
-      return NextResponse.json(
-        { ok: false, error: `Dedup check failed: ${(err as Error).message}` },
+      return json(
+        { ok: false, error: `Dedup claim failed: ${(err as Error).message}` },
         { status: 500 },
       );
     }
@@ -122,30 +129,6 @@ export async function POST(req: Request) {
     timestamp: new Date(issuedAt).toISOString(),
   };
 
-  if (isRedisConfigured()) {
-    try {
-      const walletClaim = await redisSetNx(walletKey, String(issuedAt));
-      if (!walletClaim) {
-        return NextResponse.json(
-          { ok: false, error: "This wallet has already submitted an entry." },
-          { status: 409 },
-        );
-      }
-      const handleClaim = await redisSetNx(handleKey, String(issuedAt));
-      if (!handleClaim) {
-        return NextResponse.json(
-          { ok: false, error: `@${xUsername} has already submitted an entry.` },
-          { status: 409 },
-        );
-      }
-    } catch (err) {
-      return NextResponse.json(
-        { ok: false, error: `Dedup claim failed: ${(err as Error).message}` },
-        { status: 500 },
-      );
-    }
-  }
-
   try {
     const res = await fetch(webhook, {
       method: "POST",
@@ -157,17 +140,17 @@ export async function POST(req: Request) {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      return NextResponse.json(
+      return json(
         { ok: false, error: `Discord rejected the webhook (${res.status}): ${text.slice(0, 200)}` },
         { status: 502 },
       );
     }
   } catch (err) {
-    return NextResponse.json(
+    return json(
       { ok: false, error: `Webhook request failed: ${(err as Error).message}` },
       { status: 502 },
     );
   }
 
-  return NextResponse.json({ ok: true });
+  return json({ ok: true });
 }

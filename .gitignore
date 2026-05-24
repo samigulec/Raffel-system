@@ -9,6 +9,7 @@
 # next.js
 /.next/
 /out/
+/src/app/_api.disabled/
 
 # production
 /build

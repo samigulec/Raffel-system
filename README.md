@@ -13,7 +13,7 @@ girmesi Redis ile engellenir.
 2. [Özet teknik yığın](#özet-teknik-yığın)
 3. [Dosya yapısı](#dosya-yapısı)
 4. [Lokal geliştirme](#lokal-geliştirme)
-5. [Vercel'e deploy](#vercele-deploy)
+5. [Deploy mimarisi](#deploy-mimarisi)
 6. [Ortam değişkenleri](#ortam-değişkenleri)
 7. [Konfigürasyon — `src/lib/config.ts`](#konfigürasyon--srclibconfigts)
 8. [gm doğrulama mantığı](#gm-doğrulama-mantığı)
@@ -115,17 +115,70 @@ npm run dev
 
 ---
 
-## Vercel'e deploy
+## Deploy mimarisi
+
+Frontend statik olarak cPanel'e, API Vercel Functions'a deploy edilir.
+İkisi de aynı repo'dan üretilir.
+
+```
+Statik frontend (out/)   ──►  cPanel (public_html)
+                              ↓ fetch
+API + dedup + Discord     ──►  Vercel (Functions)
+                              ↓
+                              Upstash Redis + Discord webhook
+```
+
+cPanel sadece HTML/CSS/JS serve eder. Bütün gizli işler (Discord webhook,
+Redis token, imza doğrulama) Vercel tarafındadır. Frontend → API çağrısı
+cross-origin olduğu için API tarafında CORS başlıkları gönderilir.
+
+### 1) API'yi Vercel'e deploy et
 
 1. Repo'yu GitHub'a push'la.
 2. https://vercel.com → **Add New → Project** → repo'yu seç → Deploy.
-3. Build başarılı olunca **Settings → Environments** → değişkenleri ekle
-   (aşağıdaki bölüme bak).
+3. **Settings → Environments** → Production + Preview için şu değişkenleri ekle:
+   - `DISCORD_WEBHOOK_URL`
+   - `CORS_ORIGIN` (cPanel'deki domain'in tam adresi, örn. `https://yourdomain.com`. Test sırasında `*` da bırakabilirsin ama yayında pin'le.)
 4. **Storage → Marketplace → Upstash** → Redis seç → projeye bağla
-   (Custom Prefix: `UPSTASH_REDIS` — kodumun aradığı isimle tutacak).
+   (Custom Prefix: `UPSTASH_REDIS`).
 5. **Deployments → en üstteki → ⋯ → Redeploy**.
+6. Vercel sana bir URL verir, örn. `https://raffel-xyz.vercel.app`.
+   `https://.../api/health` adresini ziyaret edip konfigürasyonu doğrula.
 
-Her `main`/aktif branch push'unda Vercel otomatik yeniden deploy eder.
+### 2) Statik frontend'i build'le
+
+Proje kökündeki `.env.local`'a Vercel API URL'ini ekle:
+
+```
+NEXT_PUBLIC_API_BASE_URL=https://raffel-xyz.vercel.app
+```
+
+Sonra:
+
+```bash
+npm install
+npm run build:static
+```
+
+Komut sırasıyla:
+
+1. `src/app/api/` klasörünü güvenli şekilde geçici olarak
+   `_api.disabled` altına taşır (Next.js `output: 'export'` API
+   route'larla aynı anda çalışmıyor).
+2. `STATIC_EXPORT=1` ile `next build` çalıştırır.
+3. `out/` klasörünü üretir ve `src/app/api/` klasörünü geri taşır.
+4. Süreç yarıda kalsa bile (CTRL+C, hata) klasör otomatik restore edilir.
+
+### 3) cPanel'e yükle
+
+1. cPanel → **File Manager** → `public_html/`'i aç.
+2. Eski dosyaları yedekle.
+3. `out/` klasörünün **içeriğini** (klasörün kendisini değil)
+   `public_html/` içine yükle.
+4. Domain'i tarayıcıda aç. Submit'te tx Vercel API'sine gidip Discord'a düşmeli.
+
+> Apache `.htaccess` ile özel rewrite gerektirmez; `trailingSlash: true`
+> sayesinde her sayfa `index.html` üzerinden serve edilir.
 
 ---
 
@@ -138,6 +191,8 @@ Hepsi **server-side**. Tarayıcıya hiçbiri gönderilmez.
 | `DISCORD_WEBHOOK_URL` | **Evet** | Submit'lerin düşeceği Discord kanalının webhook URL'i. Discord → Server Settings → Integrations → Webhooks → New Webhook → Copy URL. |
 | `UPSTASH_REDIS_REST_URL` | Önerilen | Upstash Redis REST endpoint. Tanımsızsa dedup atlanır. |
 | `UPSTASH_REDIS_REST_TOKEN` | Önerilen | Upstash Redis REST token. |
+| `CORS_ORIGIN` | Önerilen | Vercel API'nin CORS izin verdiği origin. cPanel domain'in (örn. `https://yourdomain.com`). Tanımsızsa `*`. |
+| `NEXT_PUBLIC_API_BASE_URL` | Statik build için zorunlu | `npm run build:static` çalıştırırken kullanılır. Frontend bu URL'e fetch atar. Örn. `https://raffel-xyz.vercel.app`. Trailing slash yok. |
 
 **Alias desteği:** `src/lib/redis.ts` aşağıdaki isimleri de tanır
 (Vercel Marketplace farklı prefix verirse otomatik bulur):

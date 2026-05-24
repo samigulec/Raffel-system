@@ -21,6 +21,8 @@ import { checkGm, verifyByTxHash } from "@/lib/gm";
 import { GM_CONTRACT, LINKS } from "@/lib/config";
 import { buildSubmissionMessage } from "@/lib/submission";
 
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "").replace(/\/$/, "");
+
 type StepKey = keyof Progress;
 
 type LinkStep = {
@@ -190,7 +192,7 @@ export function StepsCard() {
     setSubmitting(true);
     try {
       const signature = await signMessageAsync({ message });
-      const res = await fetch("/api/submit", {
+      const res = await fetch(`${API_BASE}/api/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
