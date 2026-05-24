@@ -44,8 +44,8 @@ const STEPS: Step[] = [
   {
     kind: "check",
     key: "gm",
-    label: "Send gm on Ethereum",
-    subtitle: "Send gm via the OnChainGM contract on ETH mainnet",
+    label: "Send gm on Ethereum (today)",
+    subtitle: "Send a fresh gm today — resets daily at 00:00 UTC",
     url: LINKS.gmDapp,
   },
 ];
@@ -120,7 +120,8 @@ export function StepsCard() {
         setError(
           res.method === "error"
             ? `Check failed: ${res.detail}`
-            : "Auto-check couldn't find a gm. If you just sent one, paste the tx hash below to verify.",
+            : res.detail ??
+                "No gm found from today (after 00:00 UTC). Send a fresh gm and retry, or paste the tx hash below.",
         );
       }
     } catch (e) {
