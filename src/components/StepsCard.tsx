@@ -12,7 +12,7 @@ import {
   TOTAL_STEPS,
   type Progress,
 } from "@/lib/progress";
-import { checkGm } from "@/lib/gm";
+import { checkGm, verifyByTxHash } from "@/lib/gm";
 import { GM_CONTRACT, LINKS } from "@/lib/config";
 
 type StepKey = keyof Progress;
@@ -69,6 +69,9 @@ export function StepsCard() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
+  const [txHash, setTxHash] = useState("");
+  const [verifyingTx, setVerifyingTx] = useState(false);
+
   const [xUsername, setXUsername] = useState("");
   const [submitInfo, setSubmitInfo] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -77,6 +80,7 @@ export function StepsCard() {
     setProgress(loadProgress(address));
     const existing = loadSubmission(address);
     setXUsername(existing?.xUsername ?? "");
+    setTxHash("");
     setError(null);
     setInfo(null);
     setSubmitInfo(null);
@@ -113,13 +117,34 @@ export function StepsCard() {
         setError(
           res.method === "error"
             ? `Check failed: ${res.detail}`
-            : "No gm found yet. Send gm on Ethereum first, then press CHECK.",
+            : "Auto-check couldn't find a gm. If you just sent one, paste the tx hash below to verify.",
         );
       }
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setChecking(false);
+    }
+  }
+
+  async function runVerifyByHash() {
+    if (!client || !address) return;
+    setVerifyingTx(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const res = await verifyByTxHash(client, address, txHash.trim());
+      if (res.ok) {
+        complete("gm");
+        setInfo(`Verified by tx ${res.detail?.slice(0, 10)}…`);
+        setTxHash("");
+      } else {
+        setError(res.detail ?? "Tx hash verification failed.");
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setVerifyingTx(false);
     }
   }
 
@@ -247,6 +272,36 @@ export function StepsCard() {
           </span>
         )}
       </div>
+
+      {isConnected && !progress.gm ? (
+        <div className="mt-3 rounded-xl bg-[rgba(8,14,32,0.5)] border border-white/5 p-3 sm:p-4">
+          <div className="text-[12px] uppercase tracking-wider text-slate-400 mb-2">
+            Verify by tx hash (fallback)
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              value={txHash}
+              onChange={(e) => setTxHash(e.target.value)}
+              placeholder="0x… your gm transaction hash on Ethereum"
+              spellCheck={false}
+              autoCapitalize="off"
+              className="flex-1 bg-[rgba(8,14,32,0.7)] border border-white/10 rounded-md px-3 h-10 text-[13px] text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-400/60"
+            />
+            <button
+              className="btn"
+              onClick={runVerifyByHash}
+              disabled={!txHash.trim() || verifyingTx}
+            >
+              {verifyingTx ? <span className="spinner mr-2" /> : null}
+              Verify
+            </button>
+          </div>
+          <p className="text-[12px] text-slate-500 mt-2 leading-snug">
+            Paste the hash of your gm tx — we’ll confirm it succeeded, was sent from this
+            wallet, and targeted the gm contract.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-6 pt-5 border-t border-white/5">
         <h3 className="text-[15px] font-semibold text-slate-100 mb-3">Submit your entry</h3>
