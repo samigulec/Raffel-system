@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAccount, usePublicClient, useSignMessage } from "wagmi";
-import { CheckIcon, ExternalIcon } from "./ExternalIcon";
+import {
+  ArrowTopRightOnSquareIcon,
+  CheckCircleIcon,
+  EllipsisHorizontalCircleIcon,
+  TrophyIcon,
+} from "@heroicons/react/24/outline";
 import {
   countCompleted,
   loadProgress,
@@ -23,7 +28,6 @@ type LinkStep = {
   key: StepKey;
   label: string;
   url: string;
-  subtitle?: string;
 };
 
 type CheckStep = {
@@ -50,9 +54,16 @@ const STEPS: Step[] = [
   },
 ];
 
+const PANEL_CLASSES =
+  "flex flex-col rounded-xl border border-slate-200/90 bg-white/95 p-3.5 shadow-[0_8px_28px_-18px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:p-4 dark:border-gray-700 dark:bg-gray-800 dark:shadow-[0_12px_36px_-20px_rgba(0,0,0,0.45)] dark:backdrop-blur-none";
+
 function isValidXHandle(value: string) {
   const trimmed = value.replace(/^@/, "").trim();
   return /^[A-Za-z0-9_]{1,15}$/.test(trimmed);
+}
+
+function short(addr: string) {
+  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
 export function StepsCard() {
@@ -179,7 +190,6 @@ export function StepsCard() {
     setSubmitting(true);
     try {
       const signature = await signMessageAsync({ message });
-
       const res = await fetch("/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -190,13 +200,11 @@ export function StepsCard() {
           signature,
         }),
       });
-
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
         setSubmitError(data.error ?? `Submit failed (${res.status}).`);
         return;
       }
-
       saveSubmission(address, {
         xUsername: handle,
         wallet: address,
@@ -216,47 +224,65 @@ export function StepsCard() {
   }
 
   return (
-    <section className="w-full max-w-[640px] rounded-2xl card-glow bg-[rgba(13,22,48,0.78)] backdrop-blur p-6 sm:p-7">
-      <header className="flex items-start justify-between gap-4 mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-md bg-gradient-to-b from-cyan-400 to-sky-500 grid place-items-center text-[#001018] font-bold">
-            1
-          </div>
-          <h2 className="text-[20px] sm:text-[22px] font-semibold tracking-tight">
-            Complete all {TOTAL_STEPS} steps
-          </h2>
-        </div>
-        <div className="text-sm text-slate-300/80 pt-2">
-          Steps <span className="text-slate-100 font-semibold">{done}/{TOTAL_STEPS}</span>
+    <section className={`w-full max-w-[560px] ${PANEL_CLASSES}`}>
+      <header className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="font-heading text-base font-semibold tracking-tight text-primary">
+          Complete all {TOTAL_STEPS} steps
+        </h2>
+        <div className="text-xs font-medium text-secondary">
+          Steps{" "}
+          <span className="font-mono tabular-nums text-primary">
+            {done}/{TOTAL_STEPS}
+          </span>
         </div>
       </header>
 
-      <p className="text-[14px] text-slate-300/85 leading-relaxed">
+      <p className="text-xs text-secondary leading-relaxed">
         Follow the steps in order. Progress is saved per wallet.
       </p>
-      <p className="text-[13px] text-slate-400/85 mt-1 leading-relaxed">
+      <p className="text-[11px] text-tertiary mt-0.5 leading-relaxed">
         Opening a step launches a new tab; each step clears automatically after a few seconds.
       </p>
 
-      <div className="mt-5 flex flex-col gap-3">
-        {STEPS.map((step, idx) => {
+      <div className="mt-4 flex flex-col gap-2">
+        {STEPS.map((step) => {
           const completed = progress[step.key];
           return (
             <div
               key={step.key}
-              className="step-row rounded-xl px-4 py-3 sm:px-5 sm:py-4 flex items-center gap-4"
+              className={
+                "rounded-lg border p-3 flex items-center gap-3 transition-colors " +
+                (completed
+                  ? "border-green-200 bg-green-50/80 dark:border-green-800/50 dark:bg-green-900/20"
+                  : "border-slate-200 bg-white dark:border-slate-600 dark:bg-slate-900/95")
+              }
             >
               <div
-                className={`step-num w-9 h-9 rounded-full grid place-items-center text-[13px] font-semibold text-slate-300 shrink-0 ${
-                  completed ? "done" : ""
-                }`}
+                className={
+                  "h-5 w-5 rounded-full grid place-items-center shrink-0 " +
+                  (completed
+                    ? "bg-green-100 dark:bg-green-900/30"
+                    : "bg-slate-200 dark:bg-slate-600")
+                }
+                aria-hidden
               >
-                {completed ? <CheckIcon /> : idx + 1}
+                {completed ? (
+                  <CheckCircleIcon className="h-3 w-3 text-green-600 dark:text-green-400" />
+                ) : (
+                  <EllipsisHorizontalCircleIcon className="h-3 w-3 text-slate-500 dark:text-slate-400" />
+                )}
               </div>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="text-[15px] sm:text-[16px] font-medium text-slate-100 truncate">
+                  <div
+                    className={
+                      "text-xs font-medium truncate " +
+                      (completed
+                        ? "text-emerald-700 dark:text-green-300"
+                        : "text-primary")
+                    }
+                  >
                     {step.label}
                   </div>
 
@@ -271,26 +297,26 @@ export function StepsCard() {
                     </button>
                   ) : (
                     <button
-                      className="btn"
+                      className="btn btn-icon"
                       onClick={() => openLinkStep(step)}
                       disabled={completed}
                       aria-label={`Open ${step.label} in a new tab`}
                       title="Open in new tab"
                     >
-                      <ExternalIcon />
+                      <ArrowTopRightOnSquareIcon className="h-3 w-3 text-tertiary" />
                     </button>
                   )}
                 </div>
 
                 {step.kind === "check" ? (
                   <a
-                    className="inline-flex items-center gap-1 text-[13px] mt-1 text-cyan-300 hover:text-cyan-200"
+                    className="inline-flex items-center gap-1 text-[11px] mt-1 text-brand-primary hover:text-brand-primary-400"
                     href={step.url}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     {step.subtitle}
-                    <ExternalIcon className="opacity-80" />
+                    <ArrowTopRightOnSquareIcon className="h-3 w-3 opacity-80" aria-hidden />
                   </a>
                 ) : null}
               </div>
@@ -299,37 +325,44 @@ export function StepsCard() {
         })}
       </div>
 
-      <div className="mt-5 min-h-[20px] text-[13px]">
+      <div className="mt-4 min-h-[18px] text-[11px]">
         {!isConnected ? (
-          <span className="text-slate-400">Connect your wallet to enable the gm check.</span>
+          <span className="text-tertiary">Connect your wallet to enable the gm check.</span>
         ) : error ? (
-          <span className="text-rose-300">{error}</span>
+          <span className="text-rose-400 dark:text-rose-300">{error}</span>
         ) : info ? (
-          <span className="text-emerald-300">{info}</span>
+          <span className="text-emerald-600 dark:text-emerald-400">{info}</span>
         ) : allDone ? (
-          <span className="text-emerald-300">All steps done — fill in your X handle below to submit.</span>
+          <span className="text-emerald-600 dark:text-emerald-400">
+            All steps done — fill in your X handle below to submit.
+          </span>
         ) : (
-          <span className="text-slate-400">
+          <span className="text-tertiary">
             Verifying against contract{" "}
-            <code className="text-slate-300">{GM_CONTRACT.slice(0, 6)}…{GM_CONTRACT.slice(-4)}</code> on Ethereum.
+            <code className="font-mono tabular-nums text-secondary">
+              {GM_CONTRACT.slice(0, 6)}…{GM_CONTRACT.slice(-4)}
+            </code>{" "}
+            on Ethereum.
           </span>
         )}
       </div>
 
       {isConnected && !progress.gm ? (
-        <div className="mt-3 rounded-xl bg-[rgba(8,14,32,0.5)] border border-white/5 p-3 sm:p-4">
-          <div className="text-[12px] uppercase tracking-wider text-slate-400 mb-2">
+        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3 dark:border-slate-700 dark:bg-slate-950/40">
+          <div className="text-[10px] font-medium uppercase tracking-wider text-tertiary mb-2">
             Verify by tx hash (fallback)
           </div>
           <div className="flex items-center gap-2">
-            <input
-              value={txHash}
-              onChange={(e) => setTxHash(e.target.value)}
-              placeholder="0x… your gm transaction hash on Ethereum"
-              spellCheck={false}
-              autoCapitalize="off"
-              className="flex-1 bg-[rgba(8,14,32,0.7)] border border-white/10 rounded-md px-3 h-10 text-[13px] text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-400/60"
-            />
+            <div className="input flex-1">
+              <input
+                value={txHash}
+                onChange={(e) => setTxHash(e.target.value)}
+                placeholder="0x… your gm transaction hash on Ethereum"
+                spellCheck={false}
+                autoCapitalize="off"
+                className="font-mono"
+              />
+            </div>
             <button
               className="btn"
               onClick={runVerifyByHash}
@@ -339,52 +372,60 @@ export function StepsCard() {
               Verify
             </button>
           </div>
-          <p className="text-[12px] text-slate-500 mt-2 leading-snug">
-            Paste the hash of your gm tx — we’ll confirm it succeeded, was sent from this
-            wallet, and targeted the gm contract.
+          <p className="text-[11px] text-tertiary mt-2 leading-snug">
+            Paste the hash of your gm tx — we’ll confirm it succeeded, was sent from this wallet,
+            and targeted the gm contract.
           </p>
         </div>
       ) : null}
 
-      <div className="mt-6 pt-5 border-t border-white/5">
-        <h3 className="text-[15px] font-semibold text-slate-100 mb-3">Submit your entry</h3>
+      <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-700/60">
+        <h3 className="font-heading text-sm font-semibold tracking-tight text-primary mb-3">
+          Submit your entry
+        </h3>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] uppercase tracking-wider text-slate-400">X username</span>
-            <div className="flex items-center bg-[rgba(8,14,32,0.7)] border border-white/10 rounded-md px-3 h-10 focus-within:border-cyan-400/60">
-              <span className="text-slate-500 mr-1">@</span>
+            <span className="text-[10px] font-medium uppercase tracking-wider text-tertiary">
+              X username
+            </span>
+            <div className="input">
+              <span className="text-tertiary mr-1">@</span>
               <input
                 value={xUsername}
                 onChange={(e) => setXUsername(e.target.value)}
                 placeholder="yourhandle"
                 spellCheck={false}
                 autoCapitalize="off"
-                className="w-full bg-transparent outline-none text-[14px] text-slate-100 placeholder:text-slate-500"
               />
             </div>
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] uppercase tracking-wider text-slate-400">Wallet address</span>
-            <div className="flex items-center bg-[rgba(8,14,32,0.7)] border border-white/10 rounded-md px-3 h-10">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-tertiary">
+              Wallet address
+            </span>
+            <div className="input">
               <input
                 value={address ?? ""}
                 readOnly
                 placeholder="Connect wallet…"
-                className="w-full bg-transparent outline-none text-[14px] text-slate-300 placeholder:text-slate-500"
+                className="font-mono tabular-nums"
               />
             </div>
           </label>
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-3">
-          <div className="text-[12px] min-h-[18px]">
+          <div className="text-[11px] min-h-[16px]">
             {submitError ? (
-              <span className="text-rose-300">{submitError}</span>
+              <span className="text-rose-400 dark:text-rose-300">{submitError}</span>
             ) : submitInfo ? (
-              <span className="text-emerald-300">{submitInfo}</span>
+              <span className="text-emerald-600 dark:text-emerald-400">{submitInfo}</span>
             ) : (
-              <span className="text-slate-500">Sign a message to confirm ownership; sent to Discord.</span>
+              <span className="text-tertiary">
+                Sign a message to confirm ownership; sent to Discord.
+              </span>
             )}
           </div>
           <button
@@ -392,15 +433,17 @@ export function StepsCard() {
             onClick={submitEntry}
             disabled={!isConnected || !allDone || submitting}
           >
-            {submitting ? <span className="spinner mr-2" /> : null}
-            {submitting ? "Submitting…" : "Submit"}
+            {submitting ? (
+              <span className="spinner mr-2" />
+            ) : (
+              <TrophyIcon className="h-3.5 w-3.5 mr-2" aria-hidden />
+            )}
+            <span className="text-sm font-semibold">
+              {submitting ? "Submitting…" : "Submit"}
+            </span>
           </button>
         </div>
       </div>
     </section>
   );
-}
-
-function short(addr: string) {
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }

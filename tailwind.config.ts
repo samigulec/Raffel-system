@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,19 +10,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: {
-          DEFAULT: "#0a1024",
-          card: "#0f172a",
-          panel: "#111a36",
-          row: "#0c1530",
-        },
-        accent: {
-          DEFAULT: "#22d3ee",
-          blue: "#0ea5e9",
+        brand: {
+          primary: "#0ea5e9",
+          "primary-400": "#38bdf8",
+          "primary-600": "#0284c7",
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        heading: ['"Plus Jakarta Sans"', "system-ui", "-apple-system", "sans-serif"],
+        body: ['"Inter"', "system-ui", "-apple-system", "sans-serif"],
+        mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+        sans: ['"Inter"', "system-ui", "-apple-system", "sans-serif"],
       },
     },
   },

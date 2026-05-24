@@ -1,6 +1,7 @@
 "use client";
 
 import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { ArrowRightOnRectangleIcon, WalletIcon } from "@heroicons/react/24/outline";
 
 function short(addr?: string) {
   if (!addr) return "";
@@ -14,8 +15,13 @@ export function ConnectButton() {
 
   if (isConnected && address) {
     return (
-      <button className="btn" onClick={() => disconnect()} title="Disconnect">
-        {short(address)}
+      <button
+        className="btn font-mono tabular-nums"
+        onClick={() => disconnect()}
+        title="Disconnect"
+      >
+        <span className="text-primary">{short(address)}</span>
+        <ArrowRightOnRectangleIcon className="h-3.5 w-3.5 ml-2 text-tertiary" aria-hidden />
       </button>
     );
   }
@@ -28,7 +34,11 @@ export function ConnectButton() {
       onClick={() => injected && connect({ connector: injected })}
       disabled={isPending || !injected}
     >
-      {isPending ? <span className="spinner mr-2" /> : null}
+      {isPending ? (
+        <span className="spinner mr-2" />
+      ) : (
+        <WalletIcon className="h-3.5 w-3.5 mr-2" aria-hidden />
+      )}
       Connect Wallet
     </button>
   );
