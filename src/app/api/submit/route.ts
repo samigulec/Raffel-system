@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createPublicClient, getAddress, http, isAddress } from "viem";
 import { mainnet } from "viem/chains";
 import { buildSubmissionMessage, SIGNATURE_TTL_MS } from "@/lib/submission";
+import { isRedisConfigured, redisExists, redisSetNx } from "@/lib/redis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,6 +83,31 @@ export async function POST(req: Request) {
     );
   }
 
+  const walletKey = `raffel:submitted:wallet:${normalized.toLowerCase()}`;
+  const handleKey = `raffel:submitted:x:${xUsername.toLowerCase()}`;
+
+  if (isRedisConfigured()) {
+    try {
+      if (await redisExists(walletKey)) {
+        return NextResponse.json(
+          { ok: false, error: "This wallet has already submitted an entry." },
+          { status: 409 },
+        );
+      }
+      if (await redisExists(handleKey)) {
+        return NextResponse.json(
+          { ok: false, error: `@${xUsername} has already submitted an entry.` },
+          { status: 409 },
+        );
+      }
+    } catch (err) {
+      return NextResponse.json(
+        { ok: false, error: `Dedup check failed: ${(err as Error).message}` },
+        { status: 500 },
+      );
+    }
+  }
+
   const embed = {
     title: "New Raffel entry",
     color: 0x22d3ee,
@@ -95,6 +121,30 @@ export async function POST(req: Request) {
     ],
     timestamp: new Date(issuedAt).toISOString(),
   };
+
+  if (isRedisConfigured()) {
+    try {
+      const walletClaim = await redisSetNx(walletKey, String(issuedAt));
+      if (!walletClaim) {
+        return NextResponse.json(
+          { ok: false, error: "This wallet has already submitted an entry." },
+          { status: 409 },
+        );
+      }
+      const handleClaim = await redisSetNx(handleKey, String(issuedAt));
+      if (!handleClaim) {
+        return NextResponse.json(
+          { ok: false, error: `@${xUsername} has already submitted an entry.` },
+          { status: 409 },
+        );
+      }
+    } catch (err) {
+      return NextResponse.json(
+        { ok: false, error: `Dedup claim failed: ${(err as Error).message}` },
+        { status: 500 },
+      );
+    }
+  }
 
   try {
     const res = await fetch(webhook, {
